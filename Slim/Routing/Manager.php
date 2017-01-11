@@ -41,7 +41,7 @@ class Manager
      * @param string $cacheDir       directory where to store the cached routes
      * @param null   $routePrefix    Prefix to add to every route (except if they have @noPrefix)
      */
-    public function  __construct(array $controllerDirs, $cacheDir, $routePrefix = null)
+    public function __construct(array $controllerDirs, $cacheDir, $routePrefix = null)
     {
 
         // if the directory does not exist, try to create it
@@ -117,7 +117,6 @@ class Manager
 
             require $this->writeCache($classes, $content);
         }
-
     }
 
     /**
@@ -138,7 +137,7 @@ class Manager
      *
      * @return string
      */
-    protected function writeCache($classes = array(), $content)
+    protected function writeCache(array $classes, $content)
     {
         $modTimes = array();
         foreach ($classes as $classFile) {
@@ -179,14 +178,23 @@ EOD;
         $content = file_get_contents($classFile);
         $result = '';
 
+        // Look for class definitions, ie: 'class MyClass [extends ParentClass] {'
         preg_match_all('/class\s+(\w*)\s*(extends\s+)?([^{])*/s', $content, $mclass, PREG_SET_ORDER);
         $className = $mclass[0][1];
         if (!$className) {
             throw new \Exception(sprintf('class not found in %s', $classFile));
         }
 
-
-        preg_match_all('|(/\*\*[^{]*?{)|', $content, $match, PREG_PATTERN_ORDER);
+        // Regex explained:
+        // \/\*\*                -> exactly '/**'
+        // ((?!\*\/).)*          -> anything except '*/'
+        // \*\/                  -> exactly '*/'
+        // ((?!(\*\/|{)).)*      -> anything except '*/' and '{'
+        // {                     -> exactly '{'
+        // /s                    -> consider line breaks with '.' special character
+        // So basically, we are looking for phpdoc blocks (/** ... */) followed by a brace opening.
+        // The 'anything except' parts prevent selecting multiple phpdoc blocks together
+        preg_match_all('/(\/\*\*((?!\*\/).)*\*\/((?!(\*\/|{)).)*{)/s', $content, $match, PREG_PATTERN_ORDER);
 
         foreach ($match[0] as $k => $m) {
             if (!substr_count($m, 'class')) {
@@ -196,9 +204,10 @@ EOD;
                     $comments = nl2br($mc[0][0]);
                     $noPrefix = strpos($comments, '@noPrefix') !== false;
 
+                    // Look for function definitions, ie: '[public ][static ] function myFunction([...]) {'
                     preg_match_all('/\*\/\s+(public\s+)?(static\s+)?function\s+([^\(]*)\(/s', $m, $mf, PREG_SET_ORDER);
-
                     if (!empty($mf)) {
+
                         $functionName = $mf[0][3];
                         preg_match_all("/\*\s+@Route\s*\('([^']*)'\)/s", $comments, $params, PREG_SET_ORDER);
 
@@ -218,7 +227,6 @@ EOD;
                             preg_match_all("/\*\s+@Name\s*\('([^']*)'\)/s", $comments, $params, PREG_SET_ORDER);
                             $name = strtolower($params[0][1]);
 
-
                             $result .= str_replace('\\', '\\\\', sprintf(
                                 '$app->map("%s", "\Lsw\Controller\%s:%s")->via("%s")->name("%s");' . PHP_EOL,
                                 $route,
@@ -228,9 +236,7 @@ EOD;
                                 $name
                             ));
                         }
-
                     }
-
                 }
             }
         }
@@ -300,5 +306,4 @@ EOD;
     {
         $this->cacheFileName = $cacheFileName;
     }
-
 }
