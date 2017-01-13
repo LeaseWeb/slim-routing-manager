@@ -1,4 +1,16 @@
 
+2.0.3
+---
+* Bugfix: sometimes certain actions would be ignored because of comment blocks within the code
+
+2.0.2
+---
+* Fixed issue with not escaping namespaces
+
+2.0.1
+---
+* Fixed slim dependency in composer.json
+
 2.0.0
 ---
 * Added support for latest version of Slim
