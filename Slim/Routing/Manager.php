@@ -132,12 +132,12 @@ class Manager
     /**
      * This method writes the cache content into cache file
      *
-     * @param array $classes
-     * @param       $content
+     * @param array|null $classes
+     * @param string     $content
      *
      * @return string
      */
-    protected function writeCache(array $classes, $content)
+    protected function writeCache($classes, $content)
     {
         $modTimes = array();
         foreach ($classes as $classFile) {
